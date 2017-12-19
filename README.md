@@ -1,6 +1,6 @@
 # Apply tags from root datasets to their children
 
-It propagates (history) tags from a root dataset to all its children. Before executing this script, make sure you have Galaxy's API key and its instance running. Please execute this script using the following command:
+It propagates (history) tags from a root dataset to all its children. Before executing this script, make sure you have the Galaxy's API key and its instance running. Please execute this script using the following command:
 
 `python apply_tags.py <galaxy_ip> <galaxy_api_key>`
 

@@ -39,37 +39,62 @@ class ApplyTagsHistory:
         Read Galaxy's current history and inherit all the tags from a parent
         to a child history item
         """
+        # connect to running Galaxy's instance
         g_instance = GalaxyInstance( self.galaxy_url, self.galaxy_api_key )
         history = g_instance.histories
+        # get the Galaxy's current history
         current_history = history.get_current_history()
         current_history_id = current_history[ "id" ]
-
         # get all datasets belonging to a history
         all_datasets = history.show_matching_datasets( current_history_id )
         for dataset in all_datasets:
-            if not dataset[ "deleted" ]:
+            if not dataset[ "deleted" ]: # if dataset is not in a deleted mode
                 # current dataset id
                 dataset_id = dataset[ "dataset_id" ]
                 # get information about the dataset like it's tools, input parameters etc
                 # used in its creation. One parameter "input" lists all the dataset id(s) 
-                # used in creating the current dataset which is/are its parent datasets
-                dataset_info = history.show_dataset_provenance( current_history_id, dataset_id  )
-                for attrs in dataset_info:
-                    if attrs == "parameters":
-                        parameters = dataset_info[ attrs ]
-                        for parameter in parameters:
-                            if parameter == "input":
-                                dataset_parent_inputs = parameters[ parameter ]
-                                # get the parent dataset(s)
-                                for parent_attr in dataset_parent_inputs:
-                                    if parent_attr == "id":
-                                        parent_dataset_id = dataset_parent_inputs[ parent_attr ]
-                                        parent_dataset = history.show_dataset( current_history_id, parent_dataset_id )
-                                        # take a union of all the tags between the child and its parent
-                                        appended_tags = self.merge_tags( parent_dataset[ "tags" ], dataset[ "tags" ] )
-                                        # do a database update for the child dataset so that it reflects the tags from its parent
-                                        history.update_dataset( current_history_id, dataset_id, tags = appended_tags )
-                                        print "Tags updated successfully!"
+                # used in creating the current dataset which is/are its parent datasets.
+                # pull the list of all parents recursively
+                dataset_info = history.show_dataset_provenance( current_history_id, dataset_id, True )
+                if "parameters" in dataset_info:
+                    dataset_parent_inputs = list()
+                    parameters = dataset_info[ "parameters" ]
+                    if "input" in parameters:
+                        dataset_parent_inputs.append( parameters[ "input" ] ) # just one parent
+                    elif "input1" in parameters:
+                        dataset_parent_inputs = self.create_parent_dataset_inputs( parameters ) # multiple parents
+                    self.propagate_tags( history, current_history_id, dataset_parent_inputs, dataset_id, dataset )   
+
+    @classmethod
+    def create_parent_dataset_inputs( self, parameters ):
+        """
+        Create a list of all parent inputs for a dataset.
+        """
+        parent_input_counter = 1
+        dataset_parent_inputs = list()
+        while True:
+            # parent datasets root attributes comes as 'input1', 'input2' and so on.
+            parent_input_name = "input" + str( parent_input_counter )
+            if parent_input_name in parameters:
+                dataset_parent_inputs.append( parameters[ parent_input_name ] )
+                parent_input_counter += 1
+            else:
+                break
+        return dataset_parent_inputs
+
+    @classmethod
+    def propagate_tags( self, history, current_history_id, dataset_parent_inputs, dataset_id, dataset ):
+        """
+        Propagate history tags from parent(s) to a child
+        """
+        for parent in dataset_parent_inputs:
+            parent_dataset_id = parent[ "id" ]
+            parent_dataset = history.show_dataset( current_history_id, parent_dataset_id )
+            # take a union of all the tags between the child and its parent
+            appended_tags = self.merge_tags( parent_dataset[ "tags" ], dataset[ "tags" ] )
+            # do a database update for the child dataset so that it reflects the tags from its parent
+            history.update_dataset( current_history_id, dataset_id, tags = appended_tags )
+            print "Tags updated successfully!"
 
 
 if __name__ == "__main__":
