@@ -23,13 +23,15 @@ class ApplyTagsHistory:
         tags = child_tags
         for parent_tag in parent_tags:
             parent_tag_split = parent_tag.split( ":" )
-            if len( parent_tag_split ) > 1: # take into account only the hashtags
+            if len( parent_tag_split ) > 1: # take only hash tags - name: tag_name
                 parent_tag_name = parent_tag.split( ":" )[ 1 ]
                 is_tag_present = False
                 for child_tag in child_tags:
-                    child_tag_name = child_tag.split( ":" )[ 1 ]
-                    if child_tag_name == parent_tag_name:
-                        is_tag_present = True 
+                    child_tag_split = child_tag.split( ":" )
+                    if len( child_tag_split ) > 1: # take only hash tags - name: tag_name
+                        child_tag_name = child_tag.split( ":" )[ 1 ]
+                        if child_tag_name == parent_tag_name:
+                            is_tag_present = True
                 # if parent's tag is not present in the list of child's tags, add it
                 if not is_tag_present:
                     tags.append( parent_tag )
