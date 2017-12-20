@@ -22,15 +22,17 @@ class ApplyTagsHistory:
         # take all the tags from the child
         tags = child_tags
         for parent_tag in parent_tags:
-            parent_tag_name = parent_tag.split( ":" )[ 1 ]
-            is_tag_present = False
-            for child_tag in child_tags:
-                child_tag_name = child_tag.split( ":" )[ 1 ]
-                if child_tag_name == parent_tag_name:
-                    is_tag_present = True 
-            # if parent's tag is not present in the list of child's tags, add it
-            if not is_tag_present:
-                tags.append( parent_tag )
+            parent_tag_split = parent_tag.split( ":" )
+            if len( parent_tag_split ) > 1: # take into account only the hashtags
+                parent_tag_name = parent_tag.split( ":" )[ 1 ]
+                is_tag_present = False
+                for child_tag in child_tags:
+                    child_tag_name = child_tag.split( ":" )[ 1 ]
+                    if child_tag_name == parent_tag_name:
+                        is_tag_present = True 
+                # if parent's tag is not present in the list of child's tags, add it
+                if not is_tag_present:
+                    tags.append( parent_tag )
         return tags
 
     @classmethod
@@ -55,18 +57,17 @@ class ApplyTagsHistory:
                 # used in its creation. One parameter "input" lists all the dataset id(s) 
                 # used in creating the current dataset which is/are its parent datasets.
                 # pull the list of all parents recursively
-                dataset_info = history.show_dataset_provenance( current_history_id, dataset_id, True )
+                dataset_info = history.show_dataset_provenance( current_history_id, dataset_id, False )
                 if "parameters" in dataset_info:
-                    dataset_parent_inputs = list()
                     parameters = dataset_info[ "parameters" ]
-                    if "input" in parameters:
-                        dataset_parent_inputs.append( parameters[ "input" ] ) # just one parent
-                    elif "input1" in parameters:
-                        dataset_parent_inputs = self.create_parent_dataset_inputs( parameters ) # multiple parents
-                    self.propagate_tags( history, current_history_id, dataset_parent_inputs, dataset_id, dataset )   
+                    if "infile" in parameters:
+                        self.propagate_tags( history, current_history_id, [ parameters[ "infile" ] ], dataset_id, dataset )  
+                    elif "infile1" in parameters:
+                        dataset_parent_inputs = self.create_parent_dataset_inputs( parameters, "infile" ) # multiple parents
+                        self.propagate_tags( history, current_history_id, dataset_parent_inputs, dataset_id, dataset )  
 
     @classmethod
-    def create_parent_dataset_inputs( self, parameters ):
+    def create_parent_dataset_inputs( self, parameters, base_parent_key ):
         """
         Create a list of all parent inputs for a dataset.
         """
@@ -74,7 +75,7 @@ class ApplyTagsHistory:
         dataset_parent_inputs = list()
         while True:
             # parent datasets root attributes comes as 'input1', 'input2' and so on.
-            parent_input_name = "input" + str( parent_input_counter )
+            parent_input_name = base_parent_key + str( parent_input_counter )
             if parent_input_name in parameters:
                 dataset_parent_inputs.append( parameters[ parent_input_name ] )
                 parent_input_counter += 1
@@ -93,7 +94,6 @@ class ApplyTagsHistory:
             # take a union of all the tags between the child and its parent
             appended_tags = self.merge_tags( parent_dataset[ "tags" ], dataset[ "tags" ] )
             # do a database update for the child dataset so that it reflects the tags from its parent
-            print "updating tags..."
             history.update_dataset( current_history_id, dataset_id, tags = appended_tags )
             print "Tags updated successfully!"
 
