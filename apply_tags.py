@@ -46,6 +46,7 @@ class ApplyTagsHistory:
         # connect to running Galaxy's instance
         g_instance = GalaxyInstance( self.galaxy_url, self.galaxy_api_key )
         history = g_instance.histories
+        job = g_instance.jobs
         # get the Galaxy's current history
         current_history = history.get_current_history()
         current_history_id = current_history[ "id" ]
@@ -55,44 +56,33 @@ class ApplyTagsHistory:
             if not dataset[ "deleted" ]: # if dataset is not in a deleted mode
                 # current dataset id
                 dataset_id = dataset[ "id" ]
-                # get information about the dataset like it's tools, input parameters etc
-                # used in its creation. One parameter "input" lists all the dataset id(s) 
+                # get information about the dataset like the job id
+                # used in its creation. One parameter "inputs" from the job details lists all the dataset id(s) 
                 # used in creating the current dataset which is/are its parent datasets.
-                # pull the list of all parents recursively
+                # get the list of all parents
                 dataset_info = history.show_dataset_provenance( current_history_id, dataset_id, False )
-                if "parameters" in dataset_info:
-                    parameters = dataset_info[ "parameters" ]
-                    if "infile" in parameters:
-                        self.propagate_tags( history, current_history_id, [ parameters[ "infile" ] ], dataset_id, dataset )  
-                    elif "infile1" in parameters:
-                        dataset_parent_inputs = self.create_parent_dataset_inputs( parameters, "infile" ) # multiple parents
-                        self.propagate_tags( history, current_history_id, dataset_parent_inputs, dataset_id, dataset )  
+                job_details = job.show_job( dataset_info[ "job_id" ], True )
+                if "inputs" in job_details:
+                    # get all the inputs for the job that created this dataset.
+                    # these inputs are the parent datasets of the current dataset
+                    job_inputs = job_details[ "inputs" ]
+                    # check for empty input files for root dataset
+                    if job_inputs:
+                        parent_datasets_ids = list()
+                        # collect all the parent datasets
+                        for item in job_inputs:
+                            # the value of the 'item' varies from tool to tool given the type of input
+                            # it could be input or infile or infile1 or in_file. it needs to be generic
+                            parent_datasets_ids.append( job_inputs[ item ][ "id" ] )
+                        self.propagate_tags( history, current_history_id, parent_datasets_ids, dataset_id, dataset )
 
     @classmethod
-    def create_parent_dataset_inputs( self, parameters, base_parent_key ):
-        """
-        Create a list of all parent inputs for a dataset.
-        """
-        parent_input_counter = 1
-        dataset_parent_inputs = list()
-        while True:
-            # parent datasets root attributes comes as 'input1', 'input2' and so on.
-            parent_input_name = base_parent_key + str( parent_input_counter )
-            if parent_input_name in parameters:
-                dataset_parent_inputs.append( parameters[ parent_input_name ] )
-                parent_input_counter += 1
-            else:
-                break
-        return dataset_parent_inputs
-
-    @classmethod
-    def propagate_tags( self, history, current_history_id, dataset_parent_inputs, dataset_id, dataset ):
+    def propagate_tags( self, history, current_history_id, parent_datasets_ids, dataset_id, dataset ):
         """
         Propagate history tags from parent(s) to a child
         """
-        for parent in dataset_parent_inputs:
-            parent_dataset_id = parent[ "id" ]
-            parent_dataset = history.show_dataset( current_history_id, parent_dataset_id )
+        for parent_id in parent_datasets_ids:
+            parent_dataset = history.show_dataset( current_history_id, parent_id )
             # take a union of all the tags between the child and its parent
             appended_tags = self.merge_tags( parent_dataset[ "tags" ], dataset[ "tags" ] )
             # do a database update for the child dataset so that it reflects the tags from its parent
