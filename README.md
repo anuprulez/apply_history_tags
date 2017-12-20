@@ -12,4 +12,6 @@ When it finishes, please refresh your Galaxy's instance to see the effect.
 
 Bioblend (https://bioblend.readthedocs.io/en/latest/index.html)
 
+## Feature/Request
+https://github.com/usegalaxy-eu/galaxy-freiburg/issues/132
 
