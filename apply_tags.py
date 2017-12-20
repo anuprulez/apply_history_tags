@@ -45,17 +45,19 @@ class ApplyTagsHistory:
         # get the Galaxy's current history
         current_history = history.get_current_history()
         current_history_id = current_history[ "id" ]
+        print current_history
         # get all datasets belonging to a history
         all_datasets = history.show_matching_datasets( current_history_id )
         for dataset in all_datasets:
             if not dataset[ "deleted" ]: # if dataset is not in a deleted mode
                 # current dataset id
-                dataset_id = dataset[ "dataset_id" ]
+                dataset_id = dataset[ "id" ]
                 # get information about the dataset like it's tools, input parameters etc
                 # used in its creation. One parameter "input" lists all the dataset id(s) 
                 # used in creating the current dataset which is/are its parent datasets.
                 # pull the list of all parents recursively
                 dataset_info = history.show_dataset_provenance( current_history_id, dataset_id, True )
+                print dataset_info
                 if "parameters" in dataset_info:
                     dataset_parent_inputs = list()
                     parameters = dataset_info[ "parameters" ]
@@ -93,6 +95,7 @@ class ApplyTagsHistory:
             # take a union of all the tags between the child and its parent
             appended_tags = self.merge_tags( parent_dataset[ "tags" ], dataset[ "tags" ] )
             # do a database update for the child dataset so that it reflects the tags from its parent
+            print "updating tags..."
             history.update_dataset( current_history_id, dataset_id, tags = appended_tags )
             print "Tags updated successfully!"
 
