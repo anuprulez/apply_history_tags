@@ -45,7 +45,6 @@ class ApplyTagsHistory:
         # get the Galaxy's current history
         current_history = history.get_current_history()
         current_history_id = current_history[ "id" ]
-        print current_history
         # get all datasets belonging to a history
         all_datasets = history.show_matching_datasets( current_history_id )
         for dataset in all_datasets:
@@ -57,7 +56,6 @@ class ApplyTagsHistory:
                 # used in creating the current dataset which is/are its parent datasets.
                 # pull the list of all parents recursively
                 dataset_info = history.show_dataset_provenance( current_history_id, dataset_id, True )
-                print dataset_info
                 if "parameters" in dataset_info:
                     dataset_parent_inputs = list()
                     parameters = dataset_info[ "parameters" ]
