@@ -52,7 +52,12 @@ class ApplyTagsHistory:
         if self.history_id is None:
             update_history = history.get_most_recently_used_history()
         else:
-            update_history = history.show_history( self.history_id )
+            try:
+                update_history = history.show_history( self.history_id )
+            except Exception as exception:
+                print "Some problem occurred with history: %s" % self.history_id
+                print exception
+                return
         update_history_id = update_history[ "id" ]
         print "History name: %s and id: %s" % ( update_history[ "name" ], update_history_id )
         self.find_dataset_parents_update_tags( history, job, update_history_id )

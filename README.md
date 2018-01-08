@@ -8,7 +8,7 @@ For example,
 `python apply_tags.py "http://localhost:8080" "**********************" "f2db41e1fa331b3e"` or
 `python apply_tags.py "http://localhost:8080" "**********************"`
 
-The last argument is history id (which is optional). If not provided, the script will take up the most recently used history. While running, the script shows which history it is working upon and display datasets one by one with their respective parents (found recursively). When it finishes, please refresh your Galaxy's instance to see the effect.
+The last argument is history id (an optional one, the other arguments are mandatory). If not provided, the script will take up the most recently used history. At the start, the script shows which history it is working upon. Once it finishes, please refresh your Galaxy's instance to see the effect.
 
 ## Dependencies
 
