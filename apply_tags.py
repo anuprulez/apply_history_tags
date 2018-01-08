@@ -48,25 +48,18 @@ class ApplyTagsHistory:
         g_instance = GalaxyInstance( self.galaxy_url, self.galaxy_api_key, self.history_id )
         history = g_instance.histories
         job = g_instance.jobs
-        # if the history id is not supplied, then update tags for all the histories accessible to the user
+        # if the history id is not supplied, then update tags for the most recently used history
         if self.history_id is None:
-            all_histories = history.get_histories()
-            for history_item in all_histories:
-                print "History name: %s and id: %s" % ( history_item[ "name" ], history_item[ "id" ] )
-                self.find_dataset_parents_update_tags( g_instance, history, job, history_item[ "id" ] )
-                print "Tags updated for history id: %s" % history_item[ "id" ]
-                print "-------------------------------------------------------"
+            update_history = history.get_most_recently_used_history()
         else:
-            try:
-                history_item = history.show_history( self.history_id )
-                print "History name: %s and id: %s" % ( history_item[ "name" ], history_item[ "id" ] )
-                self.find_dataset_parents_update_tags( g_instance, history, job, history_item[ "id" ] )
-                print "Tags updated for history id: %s" % history_item[ "id" ]
-            except Exception as exception:
-                print "Problem occurred with history id: %s" % self.history_id
+            update_history = history.show_history( self.history_id )
+        update_history_id = update_history[ "id" ]
+        print "History name: %s and id: %s" % ( update_history[ "name" ], update_history_id )
+        self.find_dataset_parents_update_tags( history, job, update_history_id )
+        print "Tags updated for history id: %s" % update_history_id
 
     @classmethod
-    def find_dataset_parents_update_tags( self, g_instance, history, job, history_id ):
+    def find_dataset_parents_update_tags( self, history, job, history_id ):
         """
         Operate on datasets for a particular history and recursively find parents
         for a dataset
@@ -82,9 +75,8 @@ class ApplyTagsHistory:
                 # used in creating the current dataset which is/are its parent datasets.
                 # get the list of all parents
                 parent_dataset_ids = list()
-                ds = g_instance.datasets.show_dataset( child_dataset_id )
-                print "Dataset: %s " % ds[ "name" ]
                 # define a routine to recursively find parent(s) of a dataset
+                # recursive method is defined here because it needs to access a local list variable inside for loop
                 def recursive_parents( history, job, history_id, dataset_id ):
                     dataset_info = history.show_dataset_provenance( history_id, dataset_id, False )
                     job_details = job.show_job( dataset_info[ "job_id" ], True )
@@ -99,16 +91,12 @@ class ApplyTagsHistory:
                                 # the value of the 'item' varies from tool to tool given the type of input
                                 # it could be input or infile or infile1 or in_file. it needs to be generic
                                 parent_id = job_inputs[ item ][ "id" ]
-                                parent_dataset_ids.append( parent_id )
-                                recursive_parents( history, job, history_id, parent_id )
+                                if parent_id not in parent_dataset_ids:
+                                    parent_dataset_ids.append( parent_id )
+                                    recursive_parents( history, job, history_id, parent_id )
                 # collect parents recursively
                 recursive_parents( history, job, history_id, child_dataset_id )
                 # display all the parents of a particular dataset
-                print "Parent datasets for %s: " % ds[ "name" ]
-                for item in parent_dataset_ids:
-                    parent_ds = g_instance.datasets.show_dataset( item )
-                    print parent_ds[ "name" ]
-                print "===================================="
                 # update history tags for a dataset taking all from its parents if there is a parent
                 if len( parent_dataset_ids ) > 0:
                     self.propagate_tags( history, history_id, parent_dataset_ids, child_dataset_id, dataset )
