@@ -59,7 +59,8 @@ class ApplyTagsHistory:
                 print exception
                 return
         update_history_id = update_history[ "id" ]
-        print "History name: %s and id: %s" % ( update_history[ "name" ], update_history_id )
+        print "History name: %s" % update_history[ "name" ]
+        print "History id: %s" % update_history_id
         self.find_dataset_parents_update_tags( history, job, update_history_id )
         print "Tags updated for history id: %s" % update_history_id
 
