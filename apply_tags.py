@@ -105,7 +105,7 @@ class ApplyTagsHistory:
                         if idx not in recursive_parents:
                             recursive_parents.append( idx )
                     for parent in child_parent_ids:
-                        find_parent_recursive( parent )      
+                        find_parent_recursive( parent )
             find_parent_recursive( item )
             recursive_parent_ids[ item ] = recursive_parents
         return recursive_parent_ids
