@@ -92,6 +92,7 @@ class ApplyTagsHistory:
                     for parent in child_parent_ids:
                         find_parent_recursive( parent )
             find_parent_recursive( item )
+            # take unique parents
             recursive_parent_ids[ item ] = list( set( recursive_parents ) )
         return recursive_parent_ids
 
@@ -105,9 +106,10 @@ class ApplyTagsHistory:
             parent_dataset = history.show_dataset( current_history_id, parent_id )
             # collect all the tags from the parent
             all_tags.extend( parent_dataset[ "tags" ] )
-        # append the children
+        # append the tags of the child itself
         all_tags.extend( dataset[ "tags" ] )
         # do a database update for the child dataset so that it reflects the tags from all parents
+        # take unique tags
         history.update_dataset( current_history_id, dataset_id, tags=list( set( all_tags ) ) )
 
 
