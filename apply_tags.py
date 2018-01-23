@@ -1,6 +1,4 @@
-"""
-Apply tags to the inherited history items of Galaxy
-"""
+""" Apply tags to the inherited history items of Galaxy """
 
 import sys
 import time
@@ -14,15 +12,6 @@ class ApplyTagsHistory:
         self.galaxy_url = galaxy_url
         self.galaxy_api_key = galaxy_api_key
         self.history_id = history_id
-
-    @classmethod
-    def merge_tags( self, parent_tags, child_tags ):
-        """
-        Take union of child and its parents' tags
-        """
-        # take all the tags from parents which are not present in the child
-        new_tags = [ tag for tag in parent_tags if tag not in child_tags ]
-        return child_tags + new_tags
 
     @classmethod
     def read_galaxy_history( self ):
@@ -80,10 +69,8 @@ class ApplyTagsHistory:
         all_parents = self.collect_parent_ids( parent_dataset_ids )
         for dataset in all_datasets:
             if not dataset[ "deleted" ]:
-                # current dataset id
                 child_dataset_id = dataset[ "id" ]
                 parent_dataset_ids = all_parents[ child_dataset_id ]
-                # display all the parents of a particular dataset
                 # update history tags for a dataset taking all from its parents if there is a parent
                 if len( parent_dataset_ids ) > 0:
                     self.propagate_tags( history, history_id, parent_dataset_ids, child_dataset_id, dataset )
@@ -101,13 +88,11 @@ class ApplyTagsHistory:
                     # get parents of a dataset
                     child_parent_ids = parent_ids[ dataset_id ]
                     # add all the parents to the recursive list
-                    for idx in child_parent_ids:
-                        if idx not in recursive_parents:
-                            recursive_parents.append( idx )
+                    recursive_parents.extend( child_parent_ids )
                     for parent in child_parent_ids:
                         find_parent_recursive( parent )
             find_parent_recursive( item )
-            recursive_parent_ids[ item ] = recursive_parents
+            recursive_parent_ids[ item ] = list( set( recursive_parents ) )
         return recursive_parent_ids
 
     @classmethod
@@ -118,13 +103,12 @@ class ApplyTagsHistory:
         all_tags = list()
         for parent_id in parent_datasets_ids:
             parent_dataset = history.show_dataset( current_history_id, parent_id )
-            # take a union of all the tags between the child and its parent
-            appended_tags = self.merge_tags( parent_dataset[ "tags" ], dataset[ "tags" ] )
-            for item in appended_tags:
-                if item not in all_tags:
-                    all_tags.append( item )
+            # collect all the tags from the parent
+            all_tags.extend( parent_dataset[ "tags" ] )
+        # append the children
+        all_tags.extend( dataset[ "tags" ] )
         # do a database update for the child dataset so that it reflects the tags from all parents
-        history.update_dataset( current_history_id, dataset_id, tags=all_tags )
+        history.update_dataset( current_history_id, dataset_id, tags=list( set( all_tags ) ) )
 
 
 if __name__ == "__main__":
@@ -132,7 +116,6 @@ if __name__ == "__main__":
     if len(sys.argv) < 3:
         print( "Usage: python apply_tags.py <galaxy_ip> <galaxy_api_key> <history_id as optional parameter>" )
         exit( 1 )
-
     start_time = time.time()
     history_id = None
     if len( sys.argv ) > 3:
