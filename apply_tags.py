@@ -48,6 +48,7 @@ class ApplyTagsHistory:
         # get all datasets belonging to a history
         all_datasets = history.show_matching_datasets( history_id )
         parent_dataset_ids = dict()
+        dataset_tags = dict()
         for dataset in all_datasets:
             if not dataset[ "deleted" ]:
                 # current dataset id
@@ -65,15 +66,14 @@ class ApplyTagsHistory:
                     for item in job_inputs:
                         parent_ids.append( job_inputs[ item ][ "id" ] )
                     parent_dataset_ids[ child_dataset_id ] = parent_ids
+                    dataset_tags[ child_dataset_id ] = dataset[ "tags" ]
         # collect all the parents for each dataset recursively
         all_parents = self.collect_parent_ids( parent_dataset_ids )
-        for dataset in all_datasets:
-            if not dataset[ "deleted" ]:
-                child_dataset_id = dataset[ "id" ]
-                parent_dataset_ids = all_parents[ child_dataset_id ]
-                # update history tags for a dataset taking all from its parents if there is a parent
-                if len( parent_dataset_ids ) > 0:
-                    self.propagate_tags( history, history_id, parent_dataset_ids, child_dataset_id, dataset )
+        for dataset_id in all_parents:
+            parent_dataset_ids = all_parents[ dataset_id ]
+            # update history tags for a dataset taking all from its parents if there is a parent
+            if len( parent_dataset_ids ) > 0:
+                self.propagate_tags( history, history_id, parent_dataset_ids, dataset_id, dataset_tags )
 
     @classmethod
     def collect_parent_ids( self, parent_ids ):
@@ -97,17 +97,16 @@ class ApplyTagsHistory:
         return recursive_parent_ids
 
     @classmethod
-    def propagate_tags( self, history, current_history_id, parent_datasets_ids, dataset_id, dataset ):
+    def propagate_tags( self, history, current_history_id, parent_datasets_ids, dataset_id, dataset_tags ):
         """
         Propagate history tags from parent(s) to a child
         """
         all_tags = list()
         for parent_id in parent_datasets_ids:
-            parent_dataset = history.show_dataset( current_history_id, parent_id )
             # collect all the tags from the parent
-            all_tags.extend( parent_dataset[ "tags" ] )
+            all_tags.extend( dataset_tags[ parent_id ] )
         # append the tags of the child itself
-        all_tags.extend( dataset[ "tags" ] )
+        all_tags.extend( dataset_tags[ dataset_id ] )
         # do a database update for the child dataset so that it reflects the tags from all parents
         # take unique tags
         history.update_dataset( current_history_id, dataset_id, tags=list( set( all_tags ) ) )
