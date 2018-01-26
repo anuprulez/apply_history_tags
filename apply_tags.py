@@ -54,6 +54,8 @@ class ApplyTagsHistory:
                 if dataset[ "deleted" ] is False and dataset[ "state" ] == 'ok':
                     parent_ids = list()
                     child_dataset_id = dataset[ "id" ]
+                    if child_dataset_id not in datasets_tags:
+                        datasets_tags[ child_dataset_id ] = dataset[ "tags" ]
                     # get information about the dataset like the job id
                     # used in its creation. One parameter "inputs" from the job details lists all the dataset id(s)
                     # used in creating the current dataset which is/are its parent datasets.
@@ -69,8 +71,6 @@ class ApplyTagsHistory:
                                 parent_dataset = history.show_dataset( history_id, parent_id )
                                 datasets_tags[ parent_id ] = parent_dataset[ "tags" ]
                             parent_ids.append( parent_id )
-                    if child_dataset_id not in datasets_tags:
-                        datasets_tags[ child_dataset_id ] = dataset[ "tags" ]
                     datasets_inheritance_chain[ child_dataset_id ] = parent_ids
             except Exception as exception:
                 pass
