@@ -45,51 +45,60 @@ class ApplyTagsHistory:
         Operate on datasets for a particular history and recursively find parents
         for a dataset
         """
+        datasets_inheritance_chain = dict()
+        datasets_tags = dict()
         # get all datasets belonging to a history
-        all_datasets = history.show_matching_datasets( history_id )
-        parent_dataset_ids = dict()
-        dataset_tags = dict()
+        all_datasets = history.show_history( history_id, contents=True )
         for dataset in all_datasets:
-            if not dataset[ "deleted" ]:
-                # current dataset id
-                child_dataset_id = dataset[ "id" ]
-                # get information about the dataset like the job id
-                # used in its creation. One parameter "inputs" from the job details lists all the dataset id(s)
-                # used in creating the current dataset which is/are its parent datasets.
-                dataset_info = history.show_dataset_provenance( history_id, child_dataset_id, False )
-                job_details = job.show_job( dataset_info[ "job_id" ], True )
-                if "inputs" in job_details:
-                    # get all the inputs for the job that created this dataset.
-                    # these inputs are the parent datasets of the current dataset
-                    job_inputs = job_details[ "inputs" ]
+            try:
+                if dataset[ "deleted" ] is False and dataset[ "state" ] == 'ok':
                     parent_ids = list()
-                    for item in job_inputs:
-                        parent_ids.append( job_inputs[ item ][ "id" ] )
-                    parent_dataset_ids[ child_dataset_id ] = parent_ids
-                    dataset_tags[ child_dataset_id ] = dataset[ "tags" ]
+                    child_dataset_id = dataset[ "id" ]
+                    # get information about the dataset like the job id
+                    # used in its creation. One parameter "inputs" from the job details lists all the dataset id(s)
+                    # used in creating the current dataset which is/are its parent datasets.
+                    dataset_info = history.show_dataset_provenance( history_id, child_dataset_id, False )
+                    job_details = job.show_job( dataset_info[ "job_id" ], True )
+                    if "inputs" in job_details:
+                        # get all the inputs for the job that created this dataset.
+                        # these inputs are the parent datasets of the current dataset
+                        job_inputs = job_details[ "inputs" ]
+                        for item in job_inputs:
+                            parent_id = job_inputs[ item ][ "id" ]
+                            if parent_id not in datasets_tags:
+                                parent_dataset = history.show_dataset( history_id, parent_id )
+                                datasets_tags[ parent_id ] = parent_dataset[ "tags" ]
+                            parent_ids.append( parent_id )
+                    if child_dataset_id not in datasets_tags:
+                        datasets_tags[ child_dataset_id ] = dataset[ "tags" ]
+                    datasets_inheritance_chain[ child_dataset_id ] = parent_ids
+            except Exception as exception:
+                pass
         # collect all the parents for each dataset recursively
-        all_parents = self.collect_parent_ids( parent_dataset_ids )
+        all_parents = self.collect_parent_ids( datasets_inheritance_chain )
+        # update tags
         for dataset_id in all_parents:
             parent_dataset_ids = all_parents[ dataset_id ]
             # update history tags for a dataset taking all from its parents if there is a parent
             if len( parent_dataset_ids ) > 0:
-                self.propagate_tags( history, history_id, parent_dataset_ids, dataset_id, dataset_tags )
+                self.propagate_tags( history, history_id, parent_dataset_ids, dataset_id, datasets_tags )
 
     @classmethod
-    def collect_parent_ids( self, parent_ids ):
+    def collect_parent_ids( self, datasets_inheritance_chain ):
         """
         Collect parent datasets for each dataset recursively
         """
         recursive_parent_ids = dict()
-        for item in parent_ids:
+        for item in datasets_inheritance_chain:
             recursive_parents = list()
+
             def find_parent_recursive( dataset_id ):
-                if dataset_id in parent_ids:
+                if dataset_id in datasets_inheritance_chain:
                     # get parents of a dataset
-                    child_parent_ids = parent_ids[ dataset_id ]
+                    dataset_parents = datasets_inheritance_chain[ dataset_id ]
                     # add all the parents to the recursive list
-                    recursive_parents.extend( child_parent_ids )
-                    for parent in child_parent_ids:
+                    recursive_parents.extend( dataset_parents )
+                    for parent in dataset_parents:
                         find_parent_recursive( parent )
             find_parent_recursive( item )
             # take unique parents
@@ -102,14 +111,20 @@ class ApplyTagsHistory:
         Propagate history tags from parent(s) to a child
         """
         all_tags = list()
+        inheritable_tags = list()
         for parent_id in parent_datasets_ids:
             # collect all the tags from the parent
             all_tags.extend( dataset_tags[ parent_id ] )
         # append the tags of the child itself
         all_tags.extend( dataset_tags[ dataset_id ] )
+        # take only hash tags
+        for tag in all_tags:
+            tag_split = tag.split( ":" )
+            if len( tag_split ) > 1 and tag not in inheritable_tags:
+                inheritable_tags.append( tag )
         # do a database update for the child dataset so that it reflects the tags from all parents
         # take unique tags
-        history.update_dataset( current_history_id, dataset_id, tags=list( set( all_tags ) ) )
+        history.update_dataset( current_history_id, dataset_id, tags=list( set( inheritable_tags ) ) )
 
 
 if __name__ == "__main__":
