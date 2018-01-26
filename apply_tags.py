@@ -124,7 +124,7 @@ class ApplyTagsHistory:
                 inheritable_tags.append( tag )
         # do a database update for the child dataset so that it reflects the tags from all parents
         # take unique tags
-        history.update_dataset( current_history_id, dataset_id, tags=list( set( inheritable_tags ) ) )
+        history.update_dataset( current_history_id, dataset_id, tags=inheritable_tags )
 
 
 if __name__ == "__main__":
