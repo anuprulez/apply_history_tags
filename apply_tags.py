@@ -68,11 +68,14 @@ class ApplyTagsHistory:
                         for item in job_inputs:
                             parent_id = job_inputs[ item ][ "id" ]
                             if parent_id not in datasets_tags:
-                                parent_dataset = history.show_dataset( history_id, parent_id )
-                                datasets_tags[ parent_id ] = parent_dataset[ "tags" ]
-                            parent_ids.append( parent_id )
+                                try:
+                                    parent_dataset = history.show_dataset( history_id, parent_id )
+                                    datasets_tags[ parent_id ] = parent_dataset[ "tags" ]
+                                    parent_ids.append( parent_id )
+                                except Exception as inner_exception:
+                                    pass
                     datasets_inheritance_chain[ child_dataset_id ] = parent_ids
-            except Exception as exception:
+            except Exception as outer_exception:
                 pass
         # collect all the parents for each dataset recursively
         all_parents = self.collect_parent_ids( datasets_inheritance_chain )
