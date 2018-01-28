@@ -46,7 +46,8 @@ class ApplyTagsHistory:
         for a dataset
         """
         datasets_inheritance_chain = dict()
-        datasets_tags = dict()
+        own_tags = dict()
+        parent_tags = dict()
         # get all datasets belonging to a history
         all_datasets = history.show_history( history_id, contents=True )
         for dataset in all_datasets:
@@ -54,8 +55,7 @@ class ApplyTagsHistory:
                 if dataset[ "deleted" ] is False and dataset[ "state" ] == 'ok':
                     parent_ids = list()
                     child_dataset_id = dataset[ "id" ]
-                    if child_dataset_id not in datasets_tags:
-                        datasets_tags[ child_dataset_id ] = dataset[ "tags" ]
+                    own_tags[ child_dataset_id ] = dataset[ "tags" ]
                     # get information about the dataset like the job id
                     # used in its creation. One parameter "inputs" from the job details lists all the dataset id(s)
                     # used in creating the current dataset which is/are its parent datasets.
@@ -67,13 +67,13 @@ class ApplyTagsHistory:
                         job_inputs = job_details[ "inputs" ]
                         for item in job_inputs:
                             parent_id = job_inputs[ item ][ "id" ]
-                            if parent_id not in datasets_tags:
-                                try:
+                            try:
+                                if parent_id not in parent_tags:
                                     parent_dataset = history.show_dataset( history_id, parent_id )
-                                    datasets_tags[ parent_id ] = parent_dataset[ "tags" ]
-                                    parent_ids.append( parent_id )
-                                except Exception as inner_exception:
-                                    pass
+                                    parent_tags[ parent_id ] = parent_dataset[ "tags" ]
+                                parent_ids.append( parent_id )
+                            except Exception as inner_exception:                              
+                                pass
                     datasets_inheritance_chain[ child_dataset_id ] = parent_ids
             except Exception as outer_exception:
                 pass
@@ -84,7 +84,7 @@ class ApplyTagsHistory:
             parent_dataset_ids = all_parents[ dataset_id ]
             # update history tags for a dataset taking all from its parents if there is a parent
             if len( parent_dataset_ids ) > 0:
-                self.propagate_tags( history, history_id, parent_dataset_ids, dataset_id, datasets_tags )
+                self.propagate_tags( history, history_id, parent_dataset_ids, dataset_id, parent_tags, own_tags )
 
     @classmethod
     def collect_parent_ids( self, datasets_inheritance_chain ):
@@ -109,7 +109,7 @@ class ApplyTagsHistory:
         return recursive_parent_ids
 
     @classmethod
-    def propagate_tags( self, history, current_history_id, parent_datasets_ids, dataset_id, dataset_tags ):
+    def propagate_tags( self, history, current_history_id, parent_datasets_ids, dataset_id, parent_tags, own_tags ):
         """
         Propagate history tags from parent(s) to a child
         """
@@ -117,9 +117,9 @@ class ApplyTagsHistory:
         inheritable_tags = list()
         for parent_id in parent_datasets_ids:
             # collect all the tags from the parent
-            all_tags.extend( dataset_tags[ parent_id ] )
+            all_tags.extend( parent_tags[ parent_id ] )
         # append the tags of the child itself
-        all_tags.extend( dataset_tags[ dataset_id ] )
+        all_tags.extend( own_tags[ dataset_id ] )
         # take only hash tags
         for tag in all_tags:
             tag_split = tag.split( ":" )
