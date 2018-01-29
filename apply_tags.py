@@ -124,9 +124,11 @@ class ApplyTagsHistory:
         # find unique tags from all parents
         all_tags = set( all_tags )
         self_tags = own_tags[ dataset_id ]
-        is_same = ( all_tags == set( self_tags ) )
+        self_tags_set = set( self_tags )
+        is_same = ( all_tags == self_tags_set )
+        is_subset = all_tags.issubset( self_tags_set )
         # update tags if there are new tags from parents
-        if not is_same:
+        if not is_same and not is_subset:
             # append the tags of the child itself
             all_tags = list( all_tags )
             all_tags.extend( self_tags )
