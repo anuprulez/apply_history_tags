@@ -70,8 +70,11 @@ class ApplyTagsHistory:
                             try:
                                 if parent_id not in parent_tags:
                                     parent_dataset = history.show_dataset( history_id, parent_id )
-                                    parent_tags[ parent_id ] = parent_dataset[ "tags" ]
-                                parent_ids.append( parent_id )
+                                    if not parent_dataset[ "deleted" ]:
+                                        parent_tags[ parent_id ] = parent_dataset[ "tags" ]
+                                        parent_ids.append( parent_id )
+                                else:
+                                    parent_ids.append( parent_id )
                             except Exception as inner_exception:                              
                                 pass
                     datasets_inheritance_chain[ child_dataset_id ] = parent_ids
