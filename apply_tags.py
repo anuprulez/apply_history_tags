@@ -118,18 +118,27 @@ class ApplyTagsHistory:
         return recursive_parent_ids
 
     @classmethod
+    def collect_hash_tags( self, tags_list ):
+        """
+        Collect only hash tags and exclude others if any
+        """
+        return [ tag for tag in tags_list if len( tag.split( ":" ) ) > 1 ]
+
+    @classmethod
     def propagate_tags( self, history, current_history_id, parent_datasets_ids, dataset_id, parent_tags, own_tags ):
         """
         Propagate history tags from parent(s) to a child
         """
         all_tags = list()
-        inheritable_tags = list()
+        #inheritable_tags = list()
         for parent_id in parent_datasets_ids:
             # collect all the tags from the parent
             all_tags.extend( parent_tags[ parent_id ] )
+        # take only hash tags
+        all_tags = self.collect_hash_tags( all_tags )
+        self_tags = self.collect_hash_tags( own_tags[ dataset_id ] )
         # find unique tags from all parents
         all_tags = set( all_tags )
-        self_tags = own_tags[ dataset_id ]
         self_tags_set = set( self_tags )
         is_same = ( all_tags == self_tags_set )
         # update tags if there are new tags from parents
@@ -140,10 +149,10 @@ class ApplyTagsHistory:
                 all_tags = list( all_tags )
                 all_tags.extend( self_tags )
                 # take only hash tags
-                inheritable_tags = [ tag for tag in all_tags if len( tag.split( ":" ) ) > 1 ]
+                #inheritable_tags = [ tag for tag in all_tags if len( tag.split( ":" ) ) > 1 ]
                 # do a database update for the child dataset so that it reflects the tags from all parents
                 # take unique tags
-                history.update_dataset( current_history_id, dataset_id, tags=inheritable_tags )
+                history.update_dataset( current_history_id, dataset_id, tags=all_tags )
                 return True
 
 
