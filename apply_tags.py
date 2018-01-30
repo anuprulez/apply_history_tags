@@ -126,17 +126,18 @@ class ApplyTagsHistory:
         self_tags = own_tags[ dataset_id ]
         self_tags_set = set( self_tags )
         is_same = ( all_tags == self_tags_set )
-        is_subset = all_tags.issubset( self_tags_set )
         # update tags if there are new tags from parents
-        if not is_same and not is_subset:
-            # append the tags of the child itself
-            all_tags = list( all_tags )
-            all_tags.extend( self_tags )
-            # take only hash tags
-            inheritable_tags = [ tag for tag in all_tags if len( tag.split( ":" ) ) > 1 ]
-            # do a database update for the child dataset so that it reflects the tags from all parents
-            # take unique tags
-            history.update_dataset( current_history_id, dataset_id, tags=inheritable_tags )
+        if is_same is False:
+            is_subset = all_tags.issubset( self_tags_set )
+            if is_subset is False:
+                # append the tags of the child itself
+                all_tags = list( all_tags )
+                all_tags.extend( self_tags )
+                # take only hash tags
+                inheritable_tags = [ tag for tag in all_tags if len( tag.split( ":" ) ) > 1 ]
+                # do a database update for the child dataset so that it reflects the tags from all parents
+                # take unique tags
+                history.update_dataset( current_history_id, dataset_id, tags=inheritable_tags )
 
 
 if __name__ == "__main__":
