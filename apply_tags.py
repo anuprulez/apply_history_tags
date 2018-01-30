@@ -76,11 +76,11 @@ class ApplyTagsHistory:
                                         parent_ids.append( parent_id )
                                 else:
                                     parent_ids.append( parent_id )
-                            except Exception as inner_exception:                              
+                            except Exception:                              
                                 pass
                     datasets_inheritance_chain[ child_dataset_id ] = parent_ids
                     count_datasets += 1
-            except Exception as outer_exception:
+            except Exception:
                 pass
         print "Number of datasets: %d" % count_datasets
         # collect all the parents for each dataset recursively
@@ -130,7 +130,6 @@ class ApplyTagsHistory:
         Propagate history tags from parent(s) to a child
         """
         all_tags = list()
-        #inheritable_tags = list()
         for parent_id in parent_datasets_ids:
             # collect all the tags from the parent
             all_tags.extend( parent_tags[ parent_id ] )
@@ -148,8 +147,6 @@ class ApplyTagsHistory:
                 # append the tags of the child itself
                 all_tags = list( all_tags )
                 all_tags.extend( self_tags )
-                # take only hash tags
-                #inheritable_tags = [ tag for tag in all_tags if len( tag.split( ":" ) ) > 1 ]
                 # do a database update for the child dataset so that it reflects the tags from all parents
                 # take unique tags
                 history.update_dataset( current_history_id, dataset_id, tags=all_tags )
