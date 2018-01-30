@@ -47,10 +47,10 @@ class ApplyTagsHistory:
         datasets_inheritance_chain = dict()
         own_tags = dict()
         parent_tags = dict()
-        count_datasets = 0
         count_datasets_updated = 0
         # get all datasets belonging to a history
         all_datasets = history.show_history( history_id, contents=True )
+        print "Total datasets: %d. Updating their tags may take a while..." % len( all_datasets )
         for dataset in all_datasets:
             try:
                 if dataset[ "deleted" ] is False and dataset[ "state" ] == 'ok':
@@ -79,10 +79,8 @@ class ApplyTagsHistory:
                             except Exception:                              
                                 pass
                     datasets_inheritance_chain[ child_dataset_id ] = parent_ids
-                    count_datasets += 1
             except Exception:
                 pass
-        print "Number of datasets: %d" % count_datasets
         # collect all the parents for each dataset recursively
         all_parents = self.collect_parent_ids( datasets_inheritance_chain )
         # update tags
