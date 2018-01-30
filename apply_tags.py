@@ -37,7 +37,6 @@ class ApplyTagsHistory:
         print "History name: %s" % update_history[ "name" ]
         print "History id: %s" % update_history_id
         self.find_dataset_parents_update_tags( history, job, update_history_id )
-        print "Tags updated for history id: %s" % update_history_id
 
     @classmethod
     def find_dataset_parents_update_tags( self, history, job, history_id ):
@@ -48,6 +47,8 @@ class ApplyTagsHistory:
         datasets_inheritance_chain = dict()
         own_tags = dict()
         parent_tags = dict()
+        count_datasets = 0
+        count_datasets_updated = 0
         # get all datasets belonging to a history
         all_datasets = history.show_history( history_id, contents=True )
         for dataset in all_datasets:
@@ -78,8 +79,10 @@ class ApplyTagsHistory:
                             except Exception as inner_exception:                              
                                 pass
                     datasets_inheritance_chain[ child_dataset_id ] = parent_ids
+                    count_datasets += 1
             except Exception as outer_exception:
                 pass
+        print "Number of datasets: %d" % count_datasets
         # collect all the parents for each dataset recursively
         all_parents = self.collect_parent_ids( datasets_inheritance_chain )
         # update tags
@@ -87,7 +90,10 @@ class ApplyTagsHistory:
             parent_dataset_ids = all_parents[ dataset_id ]
             # update history tags for a dataset taking all from its parents if there is a parent
             if len( parent_dataset_ids ) > 0:
-                self.propagate_tags( history, history_id, parent_dataset_ids, dataset_id, parent_tags, own_tags )
+                is_updated = self.propagate_tags( history, history_id, parent_dataset_ids, dataset_id, parent_tags, own_tags )
+                if is_updated is True:
+                    count_datasets_updated += 1
+        print "Tags of %d datasets updated" % count_datasets_updated
 
     @classmethod
     def collect_parent_ids( self, datasets_inheritance_chain ):
@@ -138,6 +144,7 @@ class ApplyTagsHistory:
                 # do a database update for the child dataset so that it reflects the tags from all parents
                 # take unique tags
                 history.update_dataset( current_history_id, dataset_id, tags=inheritable_tags )
+                return True
 
 
 if __name__ == "__main__":
