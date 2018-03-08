@@ -1,6 +1,6 @@
-# Propagate hash tags from root datasets to their children
+# Propagate hashtags from root datasets to their children
 
-It propagates hash tags from a root dataset to all its children. Before executing this script, make sure you have the Galaxy's API key and its instance running. You can execute this script using the following command:
+It propagates hashtags from a root dataset to all its children. Before executing this script, make sure you have the Galaxy's API key and its instance running. You can execute this script using the following command:
 
 `python apply_tags.py <galaxy_ip> <galaxy_api_key> <history_id optional>`
 
